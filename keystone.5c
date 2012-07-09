@@ -50,7 +50,7 @@ extend namespace Nichrome {
 	}
 
 	protected void natural (cairo_t cr, &quad_t quad) {
-	    rectangle (cr, 0, 0, 256, 256);
+	    rectangle (cr, 0, 0, 400, 300);
 	}
 
 	void text_at (cairo_t cr, point_t p, string text) {
