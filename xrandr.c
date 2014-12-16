@@ -153,7 +153,11 @@ usage(void)
            "  --delmode <output> <name>\n"
            "  --listproviders\n"
            "  --setprovideroutputsource <prov-xid> <source-xid>\n"
-           "  --setprovideroffloadsink <prov-xid> <sink-xid>\n");
+           "  --setprovideroffloadsink <prov-xid> <sink-xid>\n"
+	   "  --listmonitors\n"
+	   "  --listactivemonitors\n"
+	   "  --setmonitor <name> {auto|<w>/<mmw>x<h>/<mmh>+<x>+<y>} {none|<output>,<output>,...}\n"
+	   "  --delmonitor <name>\n");
 }
 
 static void _X_NORETURN _X_ATTRIBUTE_PRINTF(1,2)
@@ -304,6 +308,8 @@ typedef struct _transform transform_t;
 typedef struct _umode	umode_t;
 typedef struct _output_prop output_prop_t;
 typedef struct _provider provider_t;
+typedef struct _monitors monitors_t;
+typedef struct _umonitor umonitor_t;
 
 struct _transform {
     XTransform	    transform;
@@ -397,6 +403,22 @@ struct _provider {
     XRRProviderInfo	*info;
 };
 
+struct _monitors {
+    int			n;
+    XRRMonitorInfo	*monitors;
+};
+
+struct _umonitor {
+    struct _umonitor	*next;
+    char		*name;
+    Bool		set;
+    Bool		primary;
+    int			x, y, width, height;
+    int			mmwidth, mmheight;
+    int			noutput;
+    name_t		*outputs;
+};
+
 static const char *connection[3] = {
     "connected",
     "disconnected",
@@ -431,7 +453,10 @@ static int	minWidth, maxWidth, minHeight, maxHeight;
 static Bool    	has_1_2 = False;
 static Bool    	has_1_3 = False;
 static Bool    	has_1_4 = False;
+static Bool	has_1_5 = False;
 static name_t   provider_name, output_source_provider_name, offload_sink_provider_name;
+static monitors_t	*monitors;
+static umonitor_t	*umonitors;
 
 static int
 mode_height (XRRModeInfo *mode_info, Rotation rotation)
@@ -2556,6 +2581,22 @@ find_provider (name_t *name)
     exit (1);
 }
 
+static void
+get_monitors(Bool get_active)
+{
+    XRRMonitorInfo	*m;
+    int			n;
+
+    if (!has_1_5 || monitors)
+	return;
+
+    m = XRRGetMonitors(dpy, root, get_active, &n);
+    if (n == -1)
+	fatal("get monitors failed\n");
+    monitors = calloc(1, sizeof (monitors_t));
+    monitors->n = n;
+    monitors->monitors = m;
+}
 
 int
 main (int argc, char **argv)
@@ -2595,6 +2636,9 @@ main (int argc, char **argv)
     Bool	list_providers = False;
     Bool        provsetoutsource = False;
     Bool        provsetoffsink = False;
+    Bool	monitorit = False;
+    Bool	list_monitors = False;
+    Bool	list_active_monitors = False;
     int		major, minor;
     Bool	current = False;
     Bool	toggle_x = False;
@@ -3130,6 +3174,72 @@ main (int argc, char **argv)
 	    provsetoffsink = True;
 	    continue;
 	}
+	if (!strcmp("--listmonitors", argv[i]))
+	{
+	    list_monitors = True;
+	    action_requested = True;
+	    continue;
+	}
+	if (!strcmp("--listactivemonitors", argv[i]))
+	{
+	    list_active_monitors = True;
+	    action_requested = True;
+	    continue;
+	}
+	if (!strcmp("--setmonitor", argv[i]))
+	{
+	    umonitor_t	*m = calloc(1, sizeof (umonitor_t)), **l;
+	    char	*t;
+	    char	*o;
+	    char	*n;
+	    char	*geom;
+
+	    if (i+3 >= argc) argerr("%s requires three argument\n", argv[i]);
+	    n = argv[++i];
+	    if (*n == '*') {
+		m->primary = True;
+		n++;
+	    }
+	    m->name = n;
+	    m->set = True;
+	    geom = argv[++i];
+
+	    if (strncmp (geom, "auto", 4) != 0) {
+		if (sscanf(geom, "%d/%dx%d/%d+%d+%d",
+			   &m->width, &m->mmwidth, &m->height, &m->mmheight, &m->x, &m->y) != 6)
+		    argerr ("failed to parse '%s' as monitor geometry\n", argv[i]);
+	    }
+
+	    o = argv[++i];
+	    if (strcmp(o, "none") != 0) {
+		printf ("output list %s\n", o);
+		for (; (t = strtok(o, ",")) != NULL; o = NULL) {
+		    m->outputs = realloc(m->outputs, (m->noutput + 1) * sizeof (name_t));
+		    printf ("add monitor %s\n", t);
+		    set_name(&m->outputs[m->noutput++], t, name_string|name_xid|name_index);
+		    printf ("output name %s\n", m->outputs[m->noutput-1].string);
+		}
+	    }
+	    for (l = &umonitors; *l; l = &((*l)->next));
+	    *l = m;
+	    action_requested = True;
+	    monitorit = True;
+	    continue;
+	}
+	if (!strcmp("--delmonitor", argv[i]))
+	{
+	    umonitor_t	*m = calloc(1, sizeof (umonitor_t)), **l;
+
+	    if (++i >= argc) argerr("%s requires an argument\n", argv[i-1]);
+
+	    m->name = argv[i];
+	    m->set = False;
+	    for (l = &umonitors; *l; l = &((*l)->next));
+	    *l = m;
+	    action_requested = True;
+	    monitorit = True;
+	    continue;
+	}
 
 	argerr ("unrecognized option '%s'\n", argv[i]);
     }
@@ -3172,7 +3282,8 @@ main (int argc, char **argv)
 	has_1_3 = True;
     if (major > 1 || (major == 1 && minor >= 4))
 	has_1_4 = True;
-	
+    if (major > 1 || (major == 1 && minor >= 5))
+	has_1_5 = True;
     if (has_1_2 && modeit)
     {
 	umode_t	*m;
@@ -3216,7 +3327,7 @@ main (int argc, char **argv)
 		break;
 	    }
 	}
-	if (!setit_1_2)
+	if (!propit && !setit_1_2 && !monitorit)
 	{
 	    XSync (dpy, False);
 	    exit (0);
@@ -3427,6 +3538,73 @@ main (int argc, char **argv)
 	 */
 	apply ();
 	
+	if (!monitorit) {
+	    XSync (dpy, False);
+	    exit (0);
+	}
+    }
+    if (monitorit) {
+	umonitor_t	*u;
+	Atom		name;
+
+	if (!has_1_5) {
+	    printf("RandR 1.5 not supported\n");
+	    exit(0);
+	}
+
+	get_screen(current);
+	get_monitors(True);
+	get_crtcs();
+	get_outputs();
+
+	for (u = umonitors; u; u = u->next) {
+	    if (u->set) {
+		XRRMonitorInfo	*m;
+		int		o;
+
+		name = XInternAtom(dpy, u->name, False);
+		m = XRRAllocateMonitor(dpy, u->noutput);
+
+		m->name = name;
+		m->primary = u->primary;
+		m->x = u->x;
+		m->y = u->y;
+		m->width = u->width;
+		m->height = u->height;
+		m->mwidth = u->mmwidth;
+		m->mheight = u->mmheight;
+		for (o = 0; o < u->noutput; o++) {
+		    output_t	*output = find_output(&u->outputs[o]);
+		    if (!output)
+			fatal("cannot find output\n");
+		    m->outputs[o] = output->output.xid;
+		}
+
+		XRRSetMonitor(dpy, root, m);
+
+		XRRFreeMonitors(m);
+	    } else {
+		int	m;
+
+		name = XInternAtom(dpy, u->name, True);
+		if (!name) {
+		    printf("No monitor named '%s'\n", u->name);
+		} else {
+		    if (!monitors)
+			printf ("No monitors\n");
+		    else {
+			for (m = 0; m < monitors->n; m++) {
+			    if (monitors->monitors[m].name == name)
+				break;
+			}
+			if (m == monitors->n)
+			    printf("No monitor named '%s'\n", u->name);
+			else
+			    XRRDeleteMonitor(dpy, root, name);
+		    }
+		}
+	    }
+	}
 	XSync (dpy, False);
 	exit (0);
     }
@@ -3761,6 +3939,46 @@ main (int argc, char **argv)
 				printf(", %s", capability_name(1<<k));
 
 		printf(" crtcs: %d outputs: %d associated providers: %d name:%s\n", info->ncrtcs, info->noutputs, info->nassociatedproviders, info->name);
+	    }
+	}
+    }
+    if (list_monitors || list_active_monitors) {
+
+	if (!has_1_5) {
+	    printf("RandR 1.5 not supported\n");
+	    exit(0);
+	}
+
+	get_screen(current);
+	get_monitors(list_active_monitors ? True : False);
+	get_crtcs();
+	get_outputs();
+
+	if (monitors) {
+	    int m, o;
+
+	    printf("Monitors: %d\n", monitors->n);
+
+	    for (m = 0; m < monitors->n; m++) {
+		printf (" %d: %s%s%s %d/%dx%d/%d+%d+%d ",
+			m,
+			monitors->monitors[m].automatic ? "+" : "",
+			monitors->monitors[m].primary ? "*" : "",
+			XGetAtomName(dpy, monitors->monitors[m].name),
+			monitors->monitors[m].width,
+			monitors->monitors[m].mwidth,
+			monitors->monitors[m].height,
+			monitors->monitors[m].mheight,
+			monitors->monitors[m].x,
+			monitors->monitors[m].y);
+		for (o = 0; o < monitors->monitors[m].noutput; o++) {
+		    output_t	*output = find_output_by_xid(monitors->monitors[m].outputs[o]);
+		    if (output)
+			printf (" %s", output->output.string);
+		    else
+			printf (" unknown output 0x%x\n", (CARD32) monitors->monitors[m].outputs[o]);
+		}
+		printf ("\n");
 	    }
 	}
     }

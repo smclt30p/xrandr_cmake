@@ -39,7 +39,7 @@ XORG_DEFAULT_OPTIONS
 AC_CHECK_LIB(m,floor)
 
 # Checks for pkg-config packages
-PKG_CHECK_MODULES(XRANDR, xrandr >= 1.4 xrender x11 xproto >= 7.0.17)
+PKG_CHECK_MODULES(XRANDR, xrandr >= 1.5 xrender x11 xproto >= 7.0.17)
 
 AC_CONFIG_FILES([
 	Makefile
