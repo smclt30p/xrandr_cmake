@@ -2262,12 +2262,24 @@ property_values_from_string(const char *str, const Atom type, const int format,
 {
     char *token, *tmp;
     void *returned_bytes = NULL;
-    int nitems = 0, bytes_per_item = format / 8;
+    int nitems = 0, bytes_per_item;
 
-    if ((type != XA_INTEGER && type != XA_CARDINAL) ||
-	(format != 8 && format != 16 && format != 32))
-    {
+    if (type != XA_INTEGER && type != XA_CARDINAL)
 	return NULL;
+
+    /* compute memory needed for Xlib datatype (sigh) */
+    switch (format) {
+    case 8:
+       bytes_per_item = sizeof(char);
+       break;
+    case 16:
+       bytes_per_item = sizeof(short);
+       break;
+    case 32:
+       bytes_per_item = sizeof(long);
+       break;
+    default:
+       return NULL;
     }
 
     tmp = strdup (str);
@@ -2286,33 +2298,33 @@ property_values_from_string(const char *str, const Atom type, const int format,
 
 	if (type == XA_INTEGER && format == 8)
 	{
-	    int8_t *ptr = returned_bytes;
-	    ptr[nitems] = (int8_t) val;
+	    signed char *ptr = returned_bytes;
+	    ptr[nitems] = (char) val;
 	}
 	else if (type == XA_INTEGER && format == 16)
 	{
-	    int16_t *ptr = returned_bytes;
-	    ptr[nitems] = (int16_t) val;
+	    short *ptr = returned_bytes;
+	    ptr[nitems] = (short) val;
 	}
 	else if (type == XA_INTEGER && format == 32)
 	{
-	    int32_t *ptr = returned_bytes;
-	    ptr[nitems] = (int32_t) val;
+	    long *ptr = returned_bytes;
+	    ptr[nitems] = (long) val;
 	}
 	else if (type == XA_CARDINAL && format == 8)
 	{
-	    uint8_t *ptr = returned_bytes;
-	    ptr[nitems] = (uint8_t) val;
+	    unsigned char *ptr = returned_bytes;
+	    ptr[nitems] = (unsigned char) val;
 	}
 	else if (type == XA_CARDINAL && format == 16)
 	{
-	    uint16_t *ptr = returned_bytes;
-	    ptr[nitems] = (uint16_t) val;
+	    unsigned short *ptr = returned_bytes;
+	    ptr[nitems] = (unsigned short) val;
 	}
 	else if (type == XA_CARDINAL && format == 32)
 	{
-	    uint32_t *ptr = returned_bytes;
-	    ptr[nitems] = (uint32_t) val;
+	    unsigned long *ptr = returned_bytes;
+	    ptr[nitems] = (unsigned long) val;
 	}
 	else
 	{
@@ -2352,20 +2364,20 @@ print_output_property_value(int value_format, /* 8, 16, 32 */
     {
 	if (value_format == 8)
 	{
-	    const int8_t *val = value_bytes;
-	    printf ("%" PRId8, *val);
+	    const signed char *val = value_bytes;
+	    printf ("%d", *val);
 	    return;
 	}
 	if (value_format == 16)
 	{
-	    const int16_t *val = value_bytes;
-	    printf ("%" PRId16, *val);
+	    const short *val = value_bytes;
+	    printf ("%d", *val);
 	    return;
 	}
 	if (value_format == 32)
 	{
-	    const int32_t *val = value_bytes;
-	    printf ("%" PRId32, *val);
+	    const long *val = value_bytes;
+	    printf ("%ld", *val);
 	    return;
 	}
     }
@@ -2374,20 +2386,20 @@ print_output_property_value(int value_format, /* 8, 16, 32 */
     {
 	if (value_format == 8)
 	{
-	    const uint8_t *val = value_bytes;
-	    printf ("%" PRIu8, *val);
+	    const unsigned char *val = value_bytes;
+	    printf ("%u", *val);
 	    return;
 	}
 	if (value_format == 16)
 	{
-	    const uint16_t *val = value_bytes;
-	    printf ("%" PRIu16, *val);
+	    const unsigned short *val = value_bytes;
+	    printf ("%u", *val);
 	    return;
 	}
 	if (value_format == 32)
 	{
-	    const uint32_t *val = value_bytes;
-	    printf ("%" PRIu32, *val);
+	    const unsigned long *val = value_bytes;
+	    printf ("%lu", *val);
 	    return;
 	}
     }
@@ -2441,9 +2453,22 @@ print_output_property(const char *atom_name,
                       int nitems,
                       const unsigned char *prop)
 {
-    int bytes_per_item = value_format / 8;
+    int bytes_per_item;
     int k;
 
+    switch (value_format) {
+    case 8:
+       bytes_per_item = sizeof(char);
+       break;
+    case 16:
+       bytes_per_item = sizeof(short);
+       break;
+    case 32:
+       bytes_per_item = sizeof(long);
+       break;
+    default:
+       return NULL;
+    }
     /*
      * Check for properties that need special formatting.
      */
