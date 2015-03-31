@@ -2467,7 +2467,7 @@ print_output_property(const char *atom_name,
        bytes_per_item = sizeof(long);
        break;
     default:
-       return NULL;
+       return;
     }
     /*
      * Check for properties that need special formatting.
