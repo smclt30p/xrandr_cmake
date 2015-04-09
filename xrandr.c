@@ -566,7 +566,7 @@ mode_geometry (XRRModeInfo *mode_info, Rotation rotation,
 
 /* v refresh frequency in Hz */
 static double
-mode_refresh (XRRModeInfo *mode_info)
+mode_refresh (const XRRModeInfo *mode_info)
 {
     double rate;
     double vTotal = mode_info->vTotal;
@@ -592,7 +592,7 @@ mode_refresh (XRRModeInfo *mode_info)
 
 /* h sync frequency in Hz */
 static double
-mode_hsync (XRRModeInfo *mode_info)
+mode_hsync (const XRRModeInfo *mode_info)
 {
     double rate;
     
@@ -601,6 +601,30 @@ mode_hsync (XRRModeInfo *mode_info)
     else
     	rate = 0;
     return rate;
+}
+
+static void
+print_verbose_mode (const XRRModeInfo *mode, Bool current, Bool preferred)
+{
+    int f;
+
+    printf ("  %s (0x%x) %6.3fMHz",
+	    mode->name, (int)mode->id,
+	    (double)mode->dotClock / 1000000.0);
+    for (f = 0; mode_flags[f].flag; f++)
+	if (mode->modeFlags & mode_flags[f].flag)
+	    printf (" %s", mode_flags[f].string);
+    if (current)
+	printf (" *current");
+    if (preferred)
+	printf (" +preferred");
+    printf ("\n");
+    printf ("        h: width  %4d start %4d end %4d total %4d skew %4d clock %6.2fKHz\n",
+	    mode->width, mode->hSyncStart, mode->hSyncEnd,
+	    mode->hTotal, mode->hSkew, mode_hsync (mode) / 1000);
+    printf ("        v: height %4d start %4d end %4d total %4d           clock %6.2fHz\n",
+	    mode->height, mode->vSyncStart, mode->vSyncEnd, mode->vTotal,
+	    mode_refresh (mode));
 }
 
 static void
@@ -3836,25 +3860,9 @@ main (int argc, char **argv)
 		for (j = 0; j < output_info->nmode; j++)
 		{
 		    XRRModeInfo	*mode = find_mode_by_xid (output_info->modes[j]);
-		    int		f;
-		    
-		    printf ("  %s (0x%x) %6.3fMHz",
-			    mode->name, (int)mode->id,
-			    (double)mode->dotClock / 1000000.0);
-		    for (f = 0; mode_flags[f].flag; f++)
-			if (mode->modeFlags & mode_flags[f].flag)
-			    printf (" %s", mode_flags[f].string);
-		    if (mode == output->mode_info)
-			printf (" *current");
-		    if (j < output_info->npreferred)
-			printf (" +preferred");
-		    printf ("\n");
-		    printf ("        h: width  %4d start %4d end %4d total %4d skew %4d clock %6.2fKHz\n",
-			    mode->width, mode->hSyncStart, mode->hSyncEnd,
-			    mode->hTotal, mode->hSkew, mode_hsync (mode) / 1000);
-		    printf ("        v: height %4d start %4d end %4d total %4d           clock %6.2fHz\n",
-			    mode->height, mode->vSyncStart, mode->vSyncEnd, mode->vTotal,
-			    mode_refresh (mode));
+
+		    print_verbose_mode (mode, mode == output->mode_info,
+					j < output_info->npreferred);
 		    mode->modeFlags |= ModeShown;
 		}
 	    }
@@ -3899,17 +3907,7 @@ main (int argc, char **argv)
 	    XRRModeInfo	*mode = &res->modes[m];
 
 	    if (!(mode->modeFlags & ModeShown))
-	    {
-		printf ("  %s (0x%x) %6.3fMHz\n",
-			mode->name, (int)mode->id,
-			(double)mode->dotClock / 1000000.0);
-		printf ("        h: width  %4d start %4d end %4d total %4d skew %4d clock %6.2fKHz\n",
-			mode->width, mode->hSyncStart, mode->hSyncEnd,
-			mode->hTotal, mode->hSkew, mode_hsync (mode) / 1000);
-		printf ("        v: height %4d start %4d end %4d total %4d           clock %6.2fHz\n",
-			mode->height, mode->vSyncStart, mode->vSyncEnd, mode->vTotal,
-			mode_refresh (mode));
-	    }
+		print_verbose_mode(mode, False, False);
 	}
 	exit (0);
     }
