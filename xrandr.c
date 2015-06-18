@@ -2243,6 +2243,8 @@ static void
 pick_crtcs (void)
 {
     output_t	*output;
+    int saved_crtc_noutput[num_crtcs];
+    int n;
 
     /*
      * First try to match up newly enabled outputs with spare crtcs
@@ -2274,7 +2276,18 @@ pick_crtcs (void)
      */
     for (output = all_outputs; output; output = output->next)
 	output->current_crtc_info = output->crtc_info;
+
+    /* Mark all CRTC as currently unused */
+    for (n = 0; n < num_crtcs; n++) {
+	    saved_crtc_noutput[n] = crtcs[n].crtc_info->noutput;
+	    crtcs[n].crtc_info->noutput = 0;
+    }
+
     pick_crtcs_score (all_outputs);
+
+    for (n = 0; n < num_crtcs; n++)
+	    crtcs[n].crtc_info->noutput = saved_crtc_noutput[n];
+
     for (output = all_outputs; output; output = output->next)
     {
 	if (output->mode_info && !output->crtc_info)
