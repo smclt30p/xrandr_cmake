@@ -3029,7 +3029,7 @@ main (int argc, char **argv)
 	    if (!config_output) argerr ("%s must be used after --output\n", argv[i]);
 	    set_name_xid (&config_output->mode, None);
 	    set_name_xid (&config_output->crtc, None);
-	    config_output->changes |= changes_mode;
+	    config_output->changes |= changes_mode | changes_crtc;
 	    continue;
 	}
 	if (!strcmp ("--fb", argv[i])) {
