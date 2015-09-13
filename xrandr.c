@@ -3325,7 +3325,7 @@ main (int argc, char **argv)
     {
 	umode_t	*m;
 
-        get_screen (current);
+        get_screen (True);
 	get_crtcs();
 	get_outputs();
 	
@@ -3374,7 +3374,7 @@ main (int argc, char **argv)
     {
 	output_t *output;
 
-        get_screen (current);
+        get_screen (True);
 	get_crtcs();
 	get_outputs();
 	
@@ -3465,7 +3465,7 @@ main (int argc, char **argv)
 	if (!has_1_4)
 	    fatal ("--setprovideroutputsource requires RandR 1.4\n");
 
-	get_screen (current);
+	get_screen (True);
 	get_providers ();
 
 	provider = find_provider (&provider_name);
@@ -3480,7 +3480,7 @@ main (int argc, char **argv)
 	if (!has_1_4)
 	    fatal ("--setprovideroffloadsink requires RandR 1.4\n");
 
-	get_screen (current);
+	get_screen (True);
 	get_providers ();
 
 	provider = find_provider (&provider_name);
@@ -3490,7 +3490,7 @@ main (int argc, char **argv)
     }
     if (setit_1_2)
     {
-	get_screen (current);
+	get_screen (True);
 	get_crtcs ();
 	get_outputs ();
 	set_positions ();
@@ -3589,7 +3589,7 @@ main (int argc, char **argv)
 	    exit(0);
 	}
 
-	get_screen(current);
+	get_screen(True);
 	get_monitors(True);
 	get_crtcs();
 	get_outputs();
