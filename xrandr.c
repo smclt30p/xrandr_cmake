@@ -54,6 +54,11 @@ static Bool	automatic = False;
 static Bool	properties = False;
 static Bool	grab_server = True;
 static Bool	no_primary = False;
+static int	filter_type = -1;
+
+static const char *filter_names[2] = {
+    "bilinear",
+    "nearest"};
 
 static const char *direction[5] = {
     "normal", 
@@ -135,6 +140,7 @@ usage(void)
            "      --scale <x>x<y>\n"
            "      --scale-from <w>x<h>\n"
            "      --transform <a>,<b>,<c>,<d>,<e>,<f>,<g>,<h>,<i>\n"
+           "      --filter nearest,bilinear\n"
            "      --off\n"
            "      --crtc <crtc>\n"
            "      --panning <w>x<h>[+<x>+<y>[/<track:w>x<h>+<x>+<y>[/<border:l>/<t>/<r>/<b>]]]\n"
@@ -285,6 +291,7 @@ typedef enum _changes {
     changes_panning = (1 << 10),
     changes_gamma = (1 << 11),
     changes_primary = (1 << 12),
+    changes_filter = (1 << 13),
 } changes_t;
 
 typedef enum _name_kind {
@@ -1310,6 +1317,10 @@ set_output_info (output_t *output, RROutput xid, XRROutputInfo *output_info)
 	    output->transform.nparams = 0;
 	    output->transform.params = NULL;
 	}
+    }
+    if (output->changes & changes_filter)
+    {
+	output->transform.filter = filter_names[filter_type];
     }
 
     /* set primary */
@@ -2805,6 +2816,28 @@ main (int argc, char **argv)
 	    }
 	    
 	    setit_1_2 = True;
+	    action_requested = True;
+	    continue;
+	}
+	if (!strcmp("--filter", argv[i])) {
+	    int t;
+
+	    if (!config_output) argerr ("%s must be used after --output\n", argv[i]);
+	    if (++i >= argc) argerr("%s requires an argument\n", argv[i-1]);
+
+	    filter_type = -1;
+	    for (t = 0; t < sizeof(filter_names) / sizeof(filter_names[0]); t++)
+	    {
+		if (!strcmp(filter_names[t], argv[i]))
+		{
+		    filter_type = t;
+		    break;
+		}
+	    }
+
+	    if (filter_type == -1) argerr("Bad argument: %s, for a filter\n", argv[i]);
+
+	    config_output->changes |= changes_filter;
 	    action_requested = True;
 	    continue;
 	}
