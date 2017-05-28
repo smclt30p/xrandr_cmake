@@ -41,7 +41,8 @@ xrandr \- primitive command line interface to RandR extension
 [\-\-prop]
 [\-\-fb \fIwidth\fPx\fIheight\fP]
 [\-\-fbmm \fIwidth\fPx\fIheight\fP]
-[\-\-dpi \fIdpi\fP/\fIoutput\fP]
+[\-\-dpi \fIdpi\fP]
+[\-\-dpi \fIfrom-output\fP]
 [\-\-newmode \fIname\fP \fImode\fP]
 [\-\-rmmode \fIname\fP]
 [\-\-addmode \fIoutput\fP \fIname\fP]
@@ -228,7 +229,8 @@ option provides a way to override that behaviour.
 Sets the reported values for the physical size of the screen. Normally,
 xrandr resets the reported physical size values to keep the DPI constant.
 This overrides that computation.
-.IP "\-\-dpi \fIdpi\fP/\fIoutput\fP"
+.IP "\-\-dpi \fIdpi\fP"
+.IP "\-\-dpi \fIfrom-output\fP"
 This also sets the reported physical size values of the screen, it uses either
 the specified DPI value, or the DPI of the given output, to compute an appropriate
 physical size using whatever pixel size will be set.
