@@ -3,6 +3,7 @@
  * Copyright © 2002 Hewlett Packard Company, Inc.
  * Copyright © 2006 Intel Corporation
  * Copyright © 2013 NVIDIA Corporation
+ * Copyright © 2017 Ognjen Galic
  *
  * Permission to use, copy, modify, distribute, and sell this software and its
  * documentation for any purpose is hereby granted without fee, provided that
@@ -24,6 +25,8 @@
  *
  * Thanks to Jim Gettys who wrote most of the client side code,
  * and part of the server code for randr.
+ * 
+ * This is the CMake version of xrandr, it does not use the autotools.
  */
 
 #include <stdio.h>
@@ -3322,7 +3325,7 @@ main (int argc, char **argv)
 	    query_1 = True;
     }
     if (version)
-	printf("xrandr program version       " VERSION "\n");
+	printf("xrandr program version 1.5 (CMake)\n");
 
     dpy = XOpenDisplay (display_name);
 
